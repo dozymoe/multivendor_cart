@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <template id="cart_all" name="Shopping Cart">
+    <t t-set="cart_quantity"
+        t-value="sum([c['order'].cart_quantity for c in multivendor_cart])" />
+
+    <t t-call="website.layout">
+      <div id="wrap">
+        <div class="container oe_multivendor_cart">
+            <h1 class="mb32">Shopping Cart <span class="badge"><t t-esc="len(multivendor_cart)"/></span></h1>
+
+          <div t-if="not cart_quantity" class="well well-lg">
+            Your cart is empty!
+          </div>
+
+          <t t-foreach="multivendor_cart" t-as="cart">
+            <t t-set="so" t-value="cart['order']"/>
+            <t t-set="seller" t-value="cart['seller']"/>
+
+            <hr class="hr-style-2" t-if="not cart_first"/>
+
+            <div class="row mb32">
+              <div class="col-md-8 col-sm-9 oe_cart">
+                <table class="table table-striped table-condensed">
+                  <thead>
+                    <tr>
+                      <th width="100">Product</th>
+                      <th></th>
+                      <th class="text-center" width="130">Quantity</th>
+                      <th class="text-center" width="100">Price</th>
+                    </tr>
+                  </thead>
+                  <t t-foreach="so.order_line" t-as="line">
+                    <tr>
+                      <td colspan="2"
+                          t-if="not line.product_id.product_tmpl_id"/>
+
+                      <td t-if="line.product_id.product_tmpl_id">
+                        <a t-attf-href="/shop/product/#{ slug(line.product_id.product_tmpl_id) }">
+                          <span t-field="line.product_id.image_small"
+                              t-options="{'widget': 'image', 'class': 'img-rounded'}"/>
+                        </a>
+                      </td>
+                      <td t-if="line.product_id.product_tmpl_id">
+                        <div>
+                          <strong t-field="line.product_id.with_context(display_default_code=False).display_name"/>
+                        </div>
+                        <div class="text-muted">
+                          <t t-foreach="line.name.splitlines()[1:]"
+                              t-as="name_line">
+
+                            <span><t t-esc="name_line"/></span><br/>
+                          </t>
+                        </div>
+                      </td>
+                      <td>
+                        <div t-esc="line.product_uom_qty"/>
+                      </td>
+                      <td class="text-center">
+                        <span t-field="line.price_unit"
+                            style="white-space: nowrap;"
+                            t-options="{'widget': 'monetary', 'from_currency': so.pricelist_id.currency_id, 'display_currency': website.currency_id}"/>
+                      </td>
+                    </tr>
+                  </t>
+                  <tfoot>
+                    <tr>
+                      <td colspan="2"/>
+                      <td>Subtotal:</td>
+                      <td class="text-center">
+                        <span t-field="so.amount_untaxed"
+                            style="white-space: nowrap"
+                            t-options="{'widget': 'monetary', 'from_currency': so.pricelist_id.currency_id, 'display_currency': website.currency_id}"/>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td colspan="2"/>
+                      <td>Taxes:</td>
+                      <td class="text-center">
+                        <span t-field="so.amount_tax"
+                            style="white-space: nowrap"
+                            t-options="{'widget': 'monetary', 'from_currency': so.pricelist_id.currency_id, 'display_currency': website.currency_id}"/>
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+                <div class="clearfix"/>
+                <div class="align-right text-right">
+                  <form action="/shop/cart/all" method="post">
+                    <input type="hidden" name="csrf_token"
+                        t-att-value="request.csrf_token()"/>
+
+                    <input type="hidden" name="order_id" t-att-value="so.id"/>
+                    <button class="btn btn-primary" type="submit">
+                      Go To Cart
+                    </button>
+                  </form>
+                </div>
+              </div>
+
+              <div class="col-lg-3 col-lg-offset-1 col-md-3 col-sm-3 text-muted">
+                <div class="sold-by-label mb4" style="text-transform: uppercase">
+                  Sold by
+                </div>
+                <t t-set="mp_seller_shop_id"
+                    t-value="seller.sudo().seller_shop_id"/>
+
+                <div class="col-md-12" style="padding: 0">
+                  <div class="col-md-3" style="padding: 0">
+                    <a target="_blank" t-attf-href="/seller/profile/#{seller.url_handler if seller.url_handler else seller.id}">
+
+                      <span t-if="seller.profile_image">
+                        <img t-attf-src="/marketplace/image/#{seller.id}/res.partner/profile_image" style="height: 80px; width: 80px; border-radius: 4px;"
+                            t-att-alt="seller.name" title="Seller"/>
+                      </span>
+                      <t t-if="not seller.profile_image">
+                        <div t-attf-style="background-image: url('/odoo_marketplace/static/src/img/dummy-profile-pic.png'); background-size: 80px 80px; height: 80px; width: 80px; border-radius: 4px;"/>
+                      </t>
+                    </a>
+                  </div>
+
+                  <div class="col-md-9">
+                    <div style="color: rgb(41, 121, 183); background-color: rgb(245, 245, 245); border-radius: 3px; padding: 0 10px; height: 80px; overflow: auto;">
+                      <div class="mt4">
+                        <i class="fa fa-user"/>
+                        <a target="_blank"
+                           t-attf-href="/seller/profile/#{seller.url_handler if seller.url_handler else seller.id}"
+                           t-field="seller.name"/>
+                      </div>
+                      <t t-set="seller_add_state" t-value="seller.state_id"/>
+                      <t t-set="seller_add_country" t-value="seller.country_id"/>
+                      <t t-if="seller_add_state and seller_add_country">
+                        <div class="pp-addrees">
+                          <i class="fa fa-map-marker"/>
+                          <t t-esc="seller_add_state.name"/>,
+                          <t t-esc="seller_add_country.name"/>
+                        </div>
+                      </t>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </t>
+        </div>
+        <div class="oe_structure"/>
+      </div>
+    </t>
+  </template>
+
+
+  <template id="cart_popover" name="Cart Popover">
+    <t t-set="cart_quantity"
+        t-value="sum([c['order'].cart_quantity for c in multivendor_cart])" />
+
+    <div t-if="not cart_quantity" class="well well-lg">
+      Your cart is empty!
+    </div>
+
+    <t t-if="multivendor_cart">
+      <t t-foreach="multivendor_cart" t-as="cart">
+        <t t-foreach="cart['order'].website_order_line" t-as="line">
+          <div class="row mb8 cart_line">
+            <div class="col-xs-3">
+              <span t-field="line.product_id.image_small"
+                  t-options="{'widget': 'image', 'class': 'img-rounded'}"/>
+            </div>
+            <div class="col-xs-9">
+              <a t-attf-href="/shop/product/#{slug(line.product_id.product_tmpl_id)}">
+                <span t-esc="line.product_id.with_context(display_default_code=False).display_name"
+                    class="h6"/>
+              </a>
+              <br/>
+              <small>Qty: <t t-esc="int(line.product_uom_qty)"/></small>
+            </div>
+          </div>
+        </t>
+      </t>
+    </t>
+
+    <div class="text-center">
+      <a class="btn btn-primary" href="/shop/cart/all">
+        View Cart (<t t-esc="cart_quantity"/> items)
+      </a>
+    </div>
+  </template>
+
+</odoo>
